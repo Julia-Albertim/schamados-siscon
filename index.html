@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard SISCON &mdash; CompesaPrev</title>
+<script src="vendor/chart.umd.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --azul: #2F4A97;
+    --azul-escuro: #1F3266;
+    --azul-claro: #0098DB;
+    --verde: #8FC74A;
+    --verde-escuro: #6FA334;
+    --bg: #F3F5FA;
+    --card: #FFFFFF;
+    --texto: #1C2430;
+    --texto-suave: #6B7690;
+    --borda: #E3E7F0;
+    --vermelho: #D64550;
+    --amarelo: #E5A93C;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family: 'Segoe UI', -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--texto);
+  }
+  header{
+    background: linear-gradient(120deg, var(--azul-escuro), var(--azul) 65%, var(--azul-claro) 130%);
+    padding: 22px 36px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:16px;
+    box-shadow: 0 4px 18px rgba(31,50,102,0.25);
+  }
+  .brand{display:flex;align-items:center;gap:16px;}
+  .brand img{height:56px;background:#fff;border-radius:10px;padding:6px 10px;}
+  .brand h1{color:#fff;font-size:20px;margin:0;font-weight:600;letter-spacing:.2px;}
+  .brand p{color:#D6E0F5;margin:2px 0 0;font-size:12.5px;}
+  .updated{color:#D6E0F5;font-size:12px;text-align:right;}
+  .updated b{color:#fff;display:block;font-size:14px;}
+
+  nav.tabs{
+    display:flex;
+    gap:4px;
+    background:#fff;
+    padding:0 30px;
+    border-bottom:1px solid var(--borda);
+    overflow-x:auto;
+  }
+  nav.tabs button{
+    border:none;background:transparent;padding:14px 18px;font-size:14px;font-weight:600;
+    color: var(--texto-suave); cursor:pointer; border-bottom:3px solid transparent; white-space:nowrap;
+    transition: all .15s ease;
+  }
+  nav.tabs button:hover{color:var(--azul);}
+  nav.tabs button.active{color:var(--azul); border-bottom-color: var(--verde);}
+
+  main{padding: 22px 30px 60px;}
+
+  .filters{
+    background:var(--card); border:1px solid var(--borda); border-radius:12px;
+    padding:14px 18px; margin-bottom:20px; display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;
+  }
+  .filter-group{min-width:150px;}
+  .filter-group h4{margin:0 0 8px; font-size:11.5px; text-transform:uppercase; letter-spacing:.6px; color:var(--texto-suave);}
+  .chip-row{display:flex; flex-wrap:wrap; gap:6px;}
+  .chip{
+    padding:5px 11px; border-radius:20px; border:1px solid var(--borda); font-size:12.5px;
+    cursor:pointer; background:#fff; color:var(--texto); user-select:none; transition: all .12s ease;
+  }
+  .chip:hover{border-color:var(--azul-claro);}
+  .chip.active{background:var(--azul); border-color:var(--azul); color:#fff;}
+  .filters .clear{
+    align-self:center; margin-left:auto; font-size:12.5px; color:var(--azul); background:none; border:1px solid var(--azul);
+    padding:7px 14px; border-radius:20px; cursor:pointer; font-weight:600;
+  }
+  .filters .clear:hover{background:var(--azul); color:#fff;}
+
+  .kpis{display:grid; grid-template-columns:repeat(6,1fr); gap:14px; margin-bottom:22px;}
+  @media(max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  .kpi{
+    background:var(--card); border:1px solid var(--borda); border-radius:12px; padding:16px 16px 14px;
+    border-top:4px solid var(--azul);
+  }
+  .kpi .num{font-size:26px; font-weight:700; color:var(--azul-escuro);}
+  .kpi .lbl{font-size:12px; color:var(--texto-suave); margin-top:3px;}
+  .kpi.ok{border-top-color:var(--verde);}
+  .kpi.bad{border-top-color:var(--vermelho);}
+  .kpi.warn{border-top-color:var(--amarelo);}
+  .kpi.info{border-top-color:var(--azul-claro);}
+
+  .grid{display:grid; gap:16px;}
+  .grid.cols-2{grid-template-columns:1fr 1fr;}
+  .grid.cols-3{grid-template-columns:1.3fr 1fr 1fr;}
+  @media(max-width:960px){.grid.cols-2, .grid.cols-3{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--card); border:1px solid var(--borda); border-radius:12px; padding:16px 18px 10px;
+  }
+  .card h3{margin:0 0 4px; font-size:14.5px; color:var(--texto);}
+  .card p.hint{margin:0 0 10px; font-size:11.5px; color:var(--texto-suave);}
+  .card canvas{max-height:290px;}
+  .tall canvas{max-height:360px;}
+
+  table{width:100%; border-collapse:collapse; font-size:12.8px;}
+  th,td{padding:8px 10px; text-align:left; border-bottom:1px solid var(--borda); vertical-align:top;}
+  th{color:var(--texto-suave); font-size:11px; text-transform:uppercase; letter-spacing:.4px; position:sticky; top:0; background:#fff;}
+  tr:hover td{background:#F7F9FD;}
+  .badge{padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; display:inline-block;}
+  .b-dentro{background:#E6F4E1; color:#4C8A2A;}
+  .b-fora{background:#FCE7E8; color:#B93A44;}
+  .b-resolvido{background:#E1F0FA; color:#1B72A8;}
+  .b-semprazo{background:#F1E8FC; color:#7B4FB3;}
+  .sev-Baixa{color:#4C8A2A;font-weight:600;}
+  .sev-Normal{color:#1B72A8;font-weight:600;}
+  .sev-Média{color:#B98A1D;font-weight:600;}
+  .sev-Alta{color:#C25B1E;font-weight:600;}
+  .sev-Máxima{color:#B93A44;font-weight:600;}
+  .sev-Não.se.aplica{color:var(--texto-suave);font-weight:600;}
+
+  .table-wrap{max-height:560px; overflow:auto; border:1px solid var(--borda); border-radius:10px;}
+  .search-row{display:flex; gap:10px; margin-bottom:12px; align-items:center; flex-wrap:wrap;}
+  .search-row input{
+    padding:9px 13px; border:1px solid var(--borda); border-radius:8px; font-size:13px; flex:1; min-width:220px;
+  }
+  .count-tag{font-size:12px; color:var(--texto-suave);}
+  th.sortable{cursor:pointer;}
+  th.sortable:after{content:' \2195'; opacity:.35; font-size:10px;}
+
+  .empty-state{padding:40px; text-align:center; color:var(--texto-suave); font-size:13.5px;}
+  footer{padding:20px 30px 40px; color:var(--texto-suave); font-size:11.5px; text-align:center;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .databar{
+    background:#EAF0FC; border-bottom:1px solid var(--borda); padding:9px 30px;
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; font-size:12.5px;
+  }
+  .databar-status{display:flex; align-items:center; gap:8px; color:var(--azul-escuro); font-weight:600;}
+  .databar-status .dot{width:9px;height:9px;border-radius:50%;background:var(--amarelo); display:inline-block;}
+  .databar-status .dot.ok{background:var(--verde);}
+  .databar-status .dot.err{background:var(--vermelho);}
+  .databar-actions{display:flex; gap:8px;}
+  .btn-upload, .btn-refresh{
+    background:#fff; border:1px solid var(--azul); color:var(--azul); font-weight:600; font-size:12.5px;
+    padding:6px 13px; border-radius:20px; cursor:pointer;
+  }
+  .btn-upload:hover, .btn-refresh:hover{background:var(--azul); color:#fff;}
+
+  .empty-banner{
+    background:#FFF7E6; border:1.5px dashed var(--amarelo); border-radius:14px;
+    padding:26px 28px; margin-bottom:20px; display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+  }
+  .empty-banner.err{background:#FDECEC; border-color:var(--vermelho);}
+  .empty-banner-icon{font-size:34px;}
+  .empty-banner h2{margin:0 0 4px; font-size:17px; color:var(--texto);}
+  .empty-banner p{margin:0; font-size:13px; color:var(--texto-suave); max-width:560px;}
+  .btn-upload-big{
+    margin-left:auto; background:var(--azul); color:#fff; font-weight:700; font-size:13.5px;
+    padding:12px 20px; border-radius:10px; cursor:pointer; white-space:nowrap;
+  }
+  .btn-upload-big:hover{background:var(--azul-escuro);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <img src="logo.png" alt="CompesaPrev">
+    <div>
+      <h1>Dashboard SISCON &mdash; Chamados</h1>
+      <p>Painel interativo de acompanhamento de chamados abertos</p>
+    </div>
+  </div>
+  <div class="updated"><b id="updatedDate">&mdash;</b>última atualização dos dados</div>
+</header>
+
+
+<div class="databar" id="databar">
+  <div class="databar-status" id="dataStatus">
+    <span class="dot" id="dataDot"></span>
+    <span id="dataStatusText">Carregando planilha...</span>
+  </div>
+  <div class="databar-actions">
+    <label class="btn-upload">
+      📁 Carregar .xlsx
+      <input type="file" id="fileInput" accept=".xlsx,.xls" hidden>
+    </label>
+    <button class="btn-refresh" id="btnRefresh">🔄 Atualizar</button>
+  </div>
+</div>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="geral">Visão Geral</button>
+  <button class="tab-btn" data-tab="modulos">Por Módulo</button>
+  <button class="tab-btn" data-tab="responsaveis">Por Responsável</button>
+  <button class="tab-btn" data-tab="prazos">Prazos &amp; SLA</button>
+  <button class="tab-btn" data-tab="base">Base de Dados</button>
+</nav>
+
+<main>
+  <div class="empty-banner" id="emptyBanner" style="display:none;">
+    <div class="empty-banner-icon">📊</div>
+    <div>
+      <h2 id="emptyBannerTitle">Nenhum dado carregado ainda</h2>
+      <p id="emptyBannerText">Aguardando a leitura do arquivo Siscon_Chamados.xlsx...</p>
+    </div>
+    <label class="btn-upload-big">
+      📁 Selecionar planilha (.xlsx)
+      <input type="file" id="fileInputBig" accept=".xlsx,.xls" hidden>
+    </label>
+  </div>
+
+  <div class="filters" id="filterPanel"></div>
+
+  <div class="kpis" id="kpiRow"></div>
+
+  <!-- VISÃO GERAL -->
+  <div class="tab-panel active" id="tab-geral">
+    <div class="grid cols-3" style="margin-bottom:16px;">
+      <div class="card tall">
+        <h3>Chamados por Módulo</h3>
+        <p class="hint">Clique numa barra para filtrar o painel inteiro</p>
+        <canvas id="chartModulo"></canvas>
+      </div>
+      <div class="card tall">
+        <h3>Situação dos Chamados</h3>
+        <p class="hint">Dentro x fora do prazo x resolvidos</p>
+        <canvas id="chartSituacao"></canvas>
+      </div>
+      <div class="card tall">
+        <h3>Severidade</h3>
+        <p class="hint">Distribuição por criticidade</p>
+        <canvas id="chartSeveridade"></canvas>
+      </div>
+    </div>
+    <div class="grid cols-2">
+      <div class="card">
+        <h3>Abertura de Chamados ao Longo do Tempo</h3>
+        <p class="hint">Quantidade de chamados abertos por semana</p>
+        <canvas id="chartLinha"></canvas>
+      </div>
+      <div class="card">
+        <h3>Status Atual</h3>
+        <p class="hint">Etapa em que cada chamado se encontra</p>
+        <canvas id="chartStatus"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- POR MÓDULO -->
+  <div class="tab-panel" id="tab-modulos">
+    <div class="grid cols-2" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>Módulo x Situação</h3>
+        <p class="hint">Cruzamento: volume por módulo, empilhado pela situação de prazo</p>
+        <canvas id="chartModuloSituacao"></canvas>
+      </div>
+      <div class="card">
+        <h3>Módulo x Severidade</h3>
+        <p class="hint">Cruzamento: quais módulos concentram os chamados mais críticos</p>
+        <canvas id="chartModuloSeveridade"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Resumo por Módulo</h3>
+      <div class="table-wrap"><table id="tblModulo"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- POR RESPONSÁVEL -->
+  <div class="tab-panel" id="tab-responsaveis">
+    <div class="grid cols-2" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>Chamados por Responsável</h3>
+        <canvas id="chartResponsavel"></canvas>
+      </div>
+      <div class="card">
+        <h3>Responsável x Situação</h3>
+        <p class="hint">Cruzamento: carga de trabalho x cumprimento de prazo</p>
+        <canvas id="chartRespSituacao"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Resumo por Responsável</h3>
+      <div class="table-wrap"><table id="tblResp"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- PRAZOS -->
+  <div class="tab-panel" id="tab-prazos">
+    <div class="grid cols-2" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>Dias em Aberto por Chamado</h3>
+        <p class="hint">Quanto maior a barra, mais tempo o chamado está sem solução (chamados não resolvidos)</p>
+        <canvas id="chartDiasAberto"></canvas>
+      </div>
+      <div class="card">
+        <h3>% Dentro do Prazo por Módulo</h3>
+        <p class="hint">Percentual de cumprimento de SLA em cada módulo</p>
+        <canvas id="chartSlaModulo"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Chamados Fora do Prazo</h3>
+      <div class="table-wrap"><table id="tblFora"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- BASE DE DADOS -->
+  <div class="tab-panel" id="tab-base">
+    <div class="card">
+      <div class="search-row">
+        <input type="text" id="searchBox" placeholder="Buscar por protocolo, descrição, responsável...">
+        <span class="count-tag" id="rowCount"></span>
+      </div>
+      <div class="table-wrap"><table id="tblBase"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+</main>
+
+<footer>Dashboard gerado a partir da base SISCON (Siscon_Chamados.xlsx) &middot; CompesaPrev &middot; construído em Python + Chart.js</footer>
+
+<script>
+let RAW_DATA = [];
+
+const COLORS = {
+  azul:'#2F4A97', azulEscuro:'#1F3266', azulClaro:'#0098DB', verde:'#8FC74A', verdeEscuro:'#6FA334',
+  vermelho:'#D64550', amarelo:'#E5A93C', roxo:'#7B4FB3', cinza:'#9AA3B8'
+};
+const SITUACAO_COLORS = {
+  'Dentro do prazo': COLORS.verde,
+  'Fora do prazo': COLORS.vermelho,
+  'Resolvido dentro': COLORS.azulClaro,
+  'SEM PRAZO': COLORS.roxo
+};
+const SEV_ORDER = ['Baixa','Normal','Média','Alta','Máxima','Não se aplica'];
+const SEV_COLORS = {'Baixa':COLORS.verde,'Normal':COLORS.azulClaro,'Média':COLORS.amarelo,'Alta':'#E07A2E','Máxima':COLORS.vermelho,'Não se aplica':COLORS.cinza};
+const STATUS_COLORS = {'Pendente':COLORS.amarelo,'Resolvido':COLORS.verde,'Homologar':COLORS.azulClaro,'Verificando':COLORS.roxo,'Aguardando Revisão de código':COLORS.cinza};
+
+Chart.defaults.font.family = "'Segoe UI', Roboto, Arial, sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#6B7690';
+
+// ---- estado dos filtros ----
+const FIELDS = ['modulo','responsavel','severidade','status','situacao'];
+const FIELD_LABELS = {modulo:'Módulo', responsavel:'Responsável', severidade:'Severidade', status:'Status Atual', situacao:'Situação'};
+let filters = {modulo:new Set(), responsavel:new Set(), severidade:new Set(), status:new Set(), situacao:new Set()};
+
+function uniqueValues(field){
+  let vals = [...new Set(RAW_DATA.map(d=>d[field]).filter(v=>v!==null && v!==undefined))];
+  if(field==='severidade'){
+    vals.sort((a,b)=>SEV_ORDER.indexOf(a)-SEV_ORDER.indexOf(b));
+  } else {
+    vals.sort();
+  }
+  return vals;
+}
+
+function toggleFilter(field, value){
+  if(filters[field].has(value)) filters[field].delete(value);
+  else filters[field].add(value);
+  renderAll();
+}
+
+function clearFilters(){
+  FIELDS.forEach(f=>filters[f].clear());
+  renderAll();
+}
+
+function getFilteredData(){
+  return RAW_DATA.filter(d=>{
+    return FIELDS.every(f=>{
+      if(filters[f].size===0) return true;
+      return filters[f].has(d[f]);
+    });
+  });
+}
+
+function buildFilterPanel(){
+  const panel = document.getElementById('filterPanel');
+  panel.innerHTML='';
+  FIELDS.forEach(field=>{
+    const group = document.createElement('div');
+    group.className='filter-group';
+    const h4 = document.createElement('h4');
+    h4.textContent = FIELD_LABELS[field];
+    group.appendChild(h4);
+    const row = document.createElement('div');
+    row.className='chip-row';
+    uniqueValues(field).forEach(val=>{
+      const chip = document.createElement('div');
+      chip.className='chip' + (filters[field].has(val) ? ' active':'');
+      chip.textContent = val;
+      chip.onclick = ()=>toggleFilter(field, val);
+      row.appendChild(chip);
+    });
+    group.appendChild(row);
+    panel.appendChild(group);
+  });
+  const clearBtn = document.createElement('button');
+  clearBtn.className='clear';
+  clearBtn.textContent='Limpar filtros';
+  clearBtn.onclick = clearFilters;
+  panel.appendChild(clearBtn);
+}
+
+function daysBetween(a,b){
+  return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+let TODAY = new Date().toISOString().slice(0,10);
+function updateToday(){
+  let max = RAW_DATA.reduce((m,d)=> d.abertura && d.abertura>m ? d.abertura : m, '2000-01-01');
+  const real = new Date().toISOString().slice(0,10);
+  TODAY = max > real ? max : real; // usa a data real, a menos que a planilha tenha aberturas "futuras"
+}
+
+function situacaoBadge(sit){
+  let cls='b-dentro';
+  if(sit==='Fora do prazo') cls='b-fora';
+  else if(sit && sit.startsWith('Resolvido')) cls='b-resolvido';
+  else if(sit==='SEM PRAZO') cls='b-semprazo';
+  return `<span class="badge ${cls}">${sit||'-'}</span>`;
+}
+
+// ---- KPIs ----
+function renderKpis(data){
+  const total = data.length;
+  const dentro = data.filter(d=>d.situacao==='Dentro do prazo').length;
+  const fora = data.filter(d=>d.situacao==='Fora do prazo').length;
+  const resolvidos = data.filter(d=>d.status==='Resolvido').length;
+  const pendentes = data.filter(d=>d.status==='Pendente').length;
+  const semPrazo = data.filter(d=>d.situacao==='SEM PRAZO').length;
+
+  const kpis = [
+    {n:total, l:'Total de Chamados', c:''},
+    {n:dentro, l:'Dentro do Prazo', c:'ok'},
+    {n:fora, l:'Fora do Prazo', c:'bad'},
+    {n:pendentes, l:'Pendentes', c:'warn'},
+    {n:resolvidos, l:'Resolvidos', c:'info'},
+    {n:semPrazo, l:'Sem Prazo Definido', c:''},
+  ];
+  document.getElementById('kpiRow').innerHTML = kpis.map(k=>
+    `<div class="kpi ${k.c}"><div class="num">${k.n}</div><div class="lbl">${k.l}</div></div>`
+  ).join('');
+  document.getElementById('updatedDate').textContent = new Date(TODAY+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+}
+
+// ---- helpers de agregação ----
+function countBy(data, field){
+  const m = {};
+  data.forEach(d=>{ const v=d[field]||'—'; m[v]=(m[v]||0)+1; });
+  return m;
+}
+function crossCount(data, field1, field2){
+  const m = {};
+  data.forEach(d=>{
+    const v1=d[field1]||'—';
+    const v2=d[field2]||'—';
+    if(!m[v1]) m[v1]={};
+    m[v1][v2] = (m[v1][v2]||0)+1;
+  });
+  return m;
+}
+
+// ---- charts (referências globais p/ destroy/redraw) ----
+let charts = {};
+function destroyChart(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
+
+function barClickFilter(field){
+  return (evt, elements, chart)=>{
+    if(!elements.length) return;
+    const idx = elements[0].index;
+    const label = chart.data.labels[idx];
+    toggleFilter(field, label);
+  };
+}
+
+function renderChartModulo(data){
+  destroyChart('modulo');
+  const counts = countBy(data,'modulo');
+  const labels = Object.keys(counts).sort();
+  charts.modulo = new Chart(document.getElementById('chartModulo'), {
+    type:'bar',
+    data:{labels, datasets:[{label:'Chamados', data:labels.map(l=>counts[l]), backgroundColor:COLORS.azul, borderRadius:5, maxBarThickness:38}]},
+    options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}}, onClick:barClickFilter('modulo')}
+  });
+}
+
+function renderChartSituacao(data){
+  destroyChart('situacao');
+  const counts = countBy(data,'situacao');
+  const labels = Object.keys(counts);
+  charts.situacao = new Chart(document.getElementById('chartSituacao'), {
+    type:'doughnut',
+    data:{labels, datasets:[{data:labels.map(l=>counts[l]), backgroundColor:labels.map(l=>SITUACAO_COLORS[l]||COLORS.cinza)}]},
+    options:{plugins:{legend:{position:'bottom', labels:{boxWidth:12, padding:12}}}, onClick:barClickFilter('situacao')}
+  });
+}
+
+function renderChartSeveridade(data){
+  destroyChart('severidade');
+  const counts = countBy(data,'severidade');
+  const labels = SEV_ORDER.filter(s=>counts[s]);
+  charts.severidade = new Chart(document.getElementById('chartSeveridade'), {
+    type:'doughnut',
+    data:{labels, datasets:[{data:labels.map(l=>counts[l]), backgroundColor:labels.map(l=>SEV_COLORS[l])}]},
+    options:{plugins:{legend:{position:'bottom', labels:{boxWidth:12,padding:10}}}, onClick:barClickFilter('severidade')}
+  });
+}
+
+function renderChartStatus(data){
+  destroyChart('status');
+  const counts = countBy(data,'status');
+  const labels = Object.keys(counts);
+  charts.status = new Chart(document.getElementById('chartStatus'), {
+    type:'bar',
+    data:{labels, datasets:[{label:'Chamados', data:labels.map(l=>counts[l]), backgroundColor:labels.map(l=>STATUS_COLORS[l]||COLORS.cinza), borderRadius:5}]},
+    options:{indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true, ticks:{precision:0}}}, onClick:barClickFilter('status')}
+  });
+}
+
+function renderChartLinha(data){
+  destroyChart('linha');
+  // agrupa por semana (segunda-feira da semana)
+  const byWeek = {};
+  data.forEach(d=>{
+    if(!d.abertura) return;
+    const dt = new Date(d.abertura+'T00:00:00');
+    const day = dt.getDay();
+    const diff = (day===0? -6 : 1) - day;
+    const monday = new Date(dt); monday.setDate(dt.getDate()+diff);
+    const key = monday.toISOString().slice(0,10);
+    byWeek[key]=(byWeek[key]||0)+1;
+  });
+  const labels = Object.keys(byWeek).sort();
+  const labelsFmt = labels.map(l=> new Date(l+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+  charts.linha = new Chart(document.getElementById('chartLinha'), {
+    type:'line',
+    data:{labels:labelsFmt, datasets:[{label:'Chamados abertos', data:labels.map(l=>byWeek[l]), borderColor:COLORS.azulClaro, backgroundColor:'rgba(0,152,219,0.15)', fill:true, tension:.3, pointBackgroundColor:COLORS.azul}]},
+    options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}}}
+  });
+}
+
+function stackedDatasets(cross, catField){
+  const cats = catField==='severidade' ? SEV_ORDER : Object.keys(SITUACAO_COLORS);
+  const situacoes = catField==='severidade' ? SEV_ORDER.filter(s=>Object.values(cross).some(o=>o[s])) : Object.keys(SITUACAO_COLORS).filter(s=>Object.values(cross).some(o=>o[s]));
+  return situacoes;
+}
+
+function renderChartModuloSituacao(data){
+  destroyChart('moduloSituacao');
+  const cross = crossCount(data,'modulo','situacao');
+  const modulos = Object.keys(cross).sort();
+  const situacoes = [...new Set(data.map(d=>d.situacao))];
+  const datasets = situacoes.map(sit=>({
+    label: sit,
+    data: modulos.map(m=>cross[m][sit]||0),
+    backgroundColor: SITUACAO_COLORS[sit]||COLORS.cinza,
+    borderRadius:3
+  }));
+  charts.moduloSituacao = new Chart(document.getElementById('chartModuloSituacao'), {
+    type:'bar',
+    data:{labels:modulos, datasets},
+    options:{plugins:{legend:{position:'bottom', labels:{boxWidth:12}}}, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}}}
+  });
+}
+
+function renderChartModuloSeveridade(data){
+  destroyChart('moduloSeveridade');
+  const cross = crossCount(data,'modulo','severidade');
+  const modulos = Object.keys(cross).sort();
+  const sevs = SEV_ORDER.filter(s=>Object.values(cross).some(o=>o[s]));
+  const datasets = sevs.map(s=>({
+    label:s, data:modulos.map(m=>cross[m][s]||0), backgroundColor:SEV_COLORS[s], borderRadius:3
+  }));
+  charts.moduloSeveridade = new Chart(document.getElementById('chartModuloSeveridade'), {
+    type:'bar',
+    data:{labels:modulos, datasets},
+    options:{plugins:{legend:{position:'bottom', labels:{boxWidth:12}}}, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}}}
+  });
+}
+
+function renderChartResponsavel(data){
+  destroyChart('responsavel');
+  const counts = countBy(data,'responsavel');
+  const labels = Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  charts.responsavel = new Chart(document.getElementById('chartResponsavel'), {
+    type:'bar',
+    data:{labels, datasets:[{label:'Chamados', data:labels.map(l=>counts[l]), backgroundColor:COLORS.verdeEscuro, borderRadius:5}]},
+    options:{indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true, ticks:{precision:0}}}, onClick:barClickFilter('responsavel')}
+  });
+}
+
+function renderChartRespSituacao(data){
+  destroyChart('respSituacao');
+  const cross = crossCount(data,'responsavel','situacao');
+  const resp = Object.keys(cross).sort();
+  const situacoes = [...new Set(data.map(d=>d.situacao))];
+  const datasets = situacoes.map(sit=>({
+    label:sit, data:resp.map(r=>cross[r][sit]||0), backgroundColor:SITUACAO_COLORS[sit]||COLORS.cinza, borderRadius:3
+  }));
+  charts.respSituacao = new Chart(document.getElementById('chartRespSituacao'), {
+    type:'bar',
+    data:{labels:resp, datasets},
+    options:{plugins:{legend:{position:'bottom', labels:{boxWidth:12}}}, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}}}
+  });
+}
+
+function renderChartDiasAberto(data){
+  destroyChart('diasAberto');
+  const abertos = data.filter(d=>d.status!=='Resolvido' && d.abertura)
+    .map(d=>({protocolo:d.protocolo, modulo:d.modulo, dias:daysBetween(d.abertura, TODAY), situacao:d.situacao}))
+    .sort((a,b)=>b.dias-a.dias)
+    .slice(0,15);
+  charts.diasAberto = new Chart(document.getElementById('chartDiasAberto'), {
+    type:'bar',
+    data:{
+      labels: abertos.map(a=>`${a.modulo} · ${a.protocolo}`),
+      datasets:[{label:'Dias em aberto', data:abertos.map(a=>a.dias), backgroundColor:abertos.map(a=>a.situacao==='Fora do prazo'?COLORS.vermelho:COLORS.amarelo), borderRadius:4}]
+    },
+    options:{indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true, ticks:{precision:0}}}}
+  });
+}
+
+function renderChartSlaModulo(data){
+  destroyChart('slaModulo');
+  const modulos = [...new Set(data.map(d=>d.modulo))].sort();
+  const pct = modulos.map(m=>{
+    const sub = data.filter(d=>d.modulo===m && d.situacao!=='SEM PRAZO');
+    if(!sub.length) return 0;
+    const ok = sub.filter(d=>d.situacao==='Dentro do prazo' || d.situacao==='Resolvido dentro').length;
+    return Math.round(ok/sub.length*100);
+  });
+  charts.slaModulo = new Chart(document.getElementById('chartSlaModulo'), {
+    type:'bar',
+    data:{labels:modulos, datasets:[{label:'% dentro do prazo', data:pct, backgroundColor:pct.map(p=>p>=70?COLORS.verde:(p>=40?COLORS.amarelo:COLORS.vermelho)), borderRadius:5}]},
+    options:{plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>c.raw+'%'}}}, scales:{y:{beginAtZero:true, max:100, ticks:{callback:v=>v+'%'}}}}
+  });
+}
+
+// ---- tabelas ----
+function renderTableModulo(data){
+  const modulos = [...new Set(data.map(d=>d.modulo))].sort();
+  const thead = `<tr><th>Módulo</th><th>Total</th><th>Dentro do Prazo</th><th>Fora do Prazo</th><th>Resolvidos</th><th>% SLA</th></tr>`;
+  const rows = modulos.map(m=>{
+    const sub = data.filter(d=>d.modulo===m);
+    const dentro = sub.filter(d=>d.situacao==='Dentro do prazo' || d.situacao==='Resolvido dentro').length;
+    const fora = sub.filter(d=>d.situacao==='Fora do prazo').length;
+    const resolvidos = sub.filter(d=>d.status==='Resolvido').length;
+    const base = sub.filter(d=>d.situacao!=='SEM PRAZO').length;
+    const pct = base? Math.round(dentro/base*100) : 0;
+    return `<tr><td><b>${m}</b></td><td>${sub.length}</td><td>${dentro}</td><td>${fora}</td><td>${resolvidos}</td><td>${pct}%</td></tr>`;
+  }).join('');
+  document.querySelector('#tblModulo thead').innerHTML = thead;
+  document.querySelector('#tblModulo tbody').innerHTML = rows || `<tr><td colspan="6" class="empty-state">Nenhum dado para os filtros selecionados</td></tr>`;
+}
+
+function renderTableResp(data){
+  const resp = [...new Set(data.map(d=>d.responsavel))].sort();
+  const thead = `<tr><th>Responsável</th><th>Total</th><th>Dentro do Prazo</th><th>Fora do Prazo</th><th>Resolvidos</th><th>Pendentes</th></tr>`;
+  const rows = resp.map(r=>{
+    const sub = data.filter(d=>d.responsavel===r);
+    const dentro = sub.filter(d=>d.situacao==='Dentro do prazo' || d.situacao==='Resolvido dentro').length;
+    const fora = sub.filter(d=>d.situacao==='Fora do prazo').length;
+    const resolvidos = sub.filter(d=>d.status==='Resolvido').length;
+    const pendentes = sub.filter(d=>d.status==='Pendente').length;
+    return `<tr><td><b>${r}</b></td><td>${sub.length}</td><td>${dentro}</td><td>${fora}</td><td>${resolvidos}</td><td>${pendentes}</td></tr>`;
+  }).join('');
+  document.querySelector('#tblResp thead').innerHTML = thead;
+  document.querySelector('#tblResp tbody').innerHTML = rows || `<tr><td colspan="6" class="empty-state">Nenhum dado para os filtros selecionados</td></tr>`;
+}
+
+function renderTableFora(data){
+  const fora = data.filter(d=>d.situacao==='Fora do prazo').sort((a,b)=>(a.prazo||'').localeCompare(b.prazo||''));
+  const thead = `<tr><th>Protocolo</th><th>Módulo</th><th>Descrição</th><th>Responsável</th><th>Severidade</th><th>Prazo Final</th><th>Dias em Atraso</th></tr>`;
+  const rows = fora.map(d=>{
+    const atraso = d.prazo ? daysBetween(d.prazo, TODAY) : '-';
+    return `<tr><td>${d.protocolo}</td><td>${d.modulo}</td><td style="max-width:340px">${d.descricao}</td><td>${d.responsavel}</td><td class="sev-${(d.severidade||'').replace(/\s/g,'.')}">${d.severidade}</td><td>${fmtDate(d.prazo)}</td><td><b style="color:var(--vermelho)">${atraso}</b></td></tr>`;
+  }).join('');
+  document.querySelector('#tblFora thead').innerHTML = thead;
+  document.querySelector('#tblFora tbody').innerHTML = rows || `<tr><td colspan="7" class="empty-state">Nenhum chamado fora do prazo para os filtros selecionados 🎉</td></tr>`;
+}
+
+function fmtDate(iso){
+  if(!iso) return '-';
+  return new Date(iso+'T00:00:00').toLocaleDateString('pt-BR');
+}
+
+let baseSearch = '';
+function renderTableBase(data){
+  const thead = `<tr>
+    <th class="sortable">Protocolo</th><th class="sortable">Módulo</th><th>Descrição</th>
+    <th class="sortable">Responsável</th><th class="sortable">Severidade</th>
+    <th class="sortable">Abertura</th><th class="sortable">Prazo Final</th>
+    <th class="sortable">Status</th><th class="sortable">Situação</th><th>OBS</th></tr>`;
+  document.querySelector('#tblBase thead').innerHTML = thead;
+
+  let filtered = data;
+  if(baseSearch){
+    const q = baseSearch.toLowerCase();
+    filtered = data.filter(d => Object.values(d).some(v => String(v).toLowerCase().includes(q)));
+  }
+  document.getElementById('rowCount').textContent = `${filtered.length} de ${RAW_DATA.length} chamados`;
+
+  const rows = filtered.map(d=>`<tr>
+    <td>${d.protocolo}</td>
+    <td><b>${d.modulo}</b></td>
+    <td style="max-width:320px">${d.descricao}</td>
+    <td>${d.responsavel}</td>
+    <td class="sev-${(d.severidade||'').replace(/\s/g,'.')}">${d.severidade}</td>
+    <td>${fmtDate(d.abertura)}</td>
+    <td>${fmtDate(d.prazo)}</td>
+    <td>${d.status}</td>
+    <td>${situacaoBadge(d.situacao)}</td>
+    <td style="max-width:220px; color:var(--texto-suave); font-style:italic;">${d.obs||''}</td>
+    </tr>`).join('');
+  document.querySelector('#tblBase tbody').innerHTML = rows || `<tr><td colspan="10" class="empty-state">Nenhum chamado encontrado</td></tr>`;
+}
+
+// ---- render geral ----
+function renderAll(){
+  buildFilterPanel();
+  const data = getFilteredData();
+  renderKpis(data);
+  renderChartModulo(data);
+  renderChartSituacao(data);
+  renderChartSeveridade(data);
+  renderChartStatus(data);
+  renderChartLinha(data);
+  renderChartModuloSituacao(data);
+  renderChartModuloSeveridade(data);
+  renderChartResponsavel(data);
+  renderChartRespSituacao(data);
+  renderChartDiasAberto(data);
+  renderChartSlaModulo(data);
+  renderTableModulo(data);
+  renderTableResp(data);
+  renderTableFora(data);
+  renderTableBase(data);
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('searchBox').addEventListener('input', (e)=>{
+  baseSearch = e.target.value;
+  renderTableBase(getFilteredData());
+});
+
+// ================== LEITURA DO EXCEL (SheetJS) ==================
+const XLSX_FILENAME = 'Siscon_Chamados.xlsx'; // precisa estar na mesma pasta do index.html
+const SHEET_NAME = 'Chamados';
+
+function excelDateToISO(v){
+  if(v === null || v === undefined || v === '') return null;
+  let d;
+  if(v instanceof Date){
+    d = v;
+  } else if(typeof v === 'string'){
+    const s = v.trim();
+    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if(!m) return null;
+    let [_, dd, mm, yy] = m;
+    yy = yy.length===2 ? '20'+yy : yy;
+    d = new Date(Date.UTC(+yy, +mm-1, +dd));
+  } else if(typeof v === 'number'){
+    // serial de data do Excel
+    d = XLSX.SSF.parse_date_code(v);
+    d = new Date(Date.UTC(d.y, d.m-1, d.d));
+  } else {
+    return null;
+  }
+  if(isNaN(d.getTime())) return null;
+  // corrige erros de digitação de ano (ex: 1900 em vez de 2026)
+  if(d.getUTCFullYear() < 2020){
+    d = new Date(Date.UTC(2026, d.getUTCMonth(), d.getUTCDate()));
+  }
+  return d.toISOString().slice(0,10);
+}
+
+function parseWorkbook(workbook){
+  const sheetName = workbook.SheetNames.includes(SHEET_NAME) ? SHEET_NAME : workbook.SheetNames[0];
+  const ws = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+
+  // acha a linha de cabeçalho procurando "Módulo" na coluna A
+  let headerIdx = rows.findIndex(r => (r[0]+'').trim() === 'Módulo');
+  if(headerIdx === -1) headerIdx = 3; // fallback pro layout padrão
+
+  const out = [];
+  for(let i = headerIdx+1; i < rows.length; i++){
+    const r = rows[i];
+    const modulo = r[0];
+    if(modulo === null || modulo === undefined || (''+modulo).trim() === '') continue;
+    out.push({
+      modulo: (''+modulo).trim(),
+      protocolo: r[1],
+      descricao: (r[2] || '').toString().trim(),
+      responsavel: r[3],
+      severidade: r[4],
+      abertura: excelDateToISO(r[5]),
+      prazo: excelDateToISO(r[6]),
+      status: r[7],
+      situacao: r[8],
+      obs: (r[9] || '').toString().trim()
+    });
+  }
+  return out;
+}
+
+function setStatus(text, state){
+  document.getElementById('dataStatusText').textContent = text;
+  const dot = document.getElementById('dataDot');
+  dot.className = 'dot' + (state ? ' '+state : '');
+}
+
+function showEmptyBanner(title, text, isError){
+  const banner = document.getElementById('emptyBanner');
+  banner.style.display = 'flex';
+  banner.className = 'empty-banner' + (isError ? ' err' : '');
+  document.getElementById('emptyBannerTitle').textContent = title;
+  document.getElementById('emptyBannerText').textContent = text;
+}
+function hideEmptyBanner(){
+  document.getElementById('emptyBanner').style.display = 'none';
+}
+
+function loadFromArrayBuffer(buf, sourceLabel){
+  try{
+    const workbook = XLSX.read(buf, {type:'array', cellDates:true});
+    console.log('[dashboard] abas encontradas no arquivo:', workbook.SheetNames);
+    const parsed = parseWorkbook(workbook);
+    console.log('[dashboard] linhas de chamados encontradas:', parsed.length, parsed);
+    if(!parsed.length){
+      setStatus('Planilha lida (0 chamados encontrados)', 'err');
+      showEmptyBanner(
+        'Planilha lida, mas sem chamados reconhecidos',
+        'O arquivo "' + sourceLabel + '" foi aberto, mas não encontrei a coluna "Módulo" na aba "Chamados" (abas do arquivo: ' + workbook.SheetNames.join(', ') + '). Confira se é a planilha certa.',
+        true
+      );
+      return;
+    }
+    RAW_DATA = parsed;
+    updateToday();
+    clearFilters(); // já chama renderAll()
+    hideEmptyBanner();
+    const now = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    setStatus(`✅ ${parsed.length} chamados carregados de "${sourceLabel}" às ${now}`, 'ok');
+  } catch(err){
+    console.error('[dashboard] erro ao ler o arquivo:', err);
+    setStatus('Erro ao ler o arquivo: ' + err.message, 'err');
+    showEmptyBanner('Não consegui ler esse arquivo', 'Detalhe técnico: ' + err.message + '. Confira se é o .xlsx exportado do SISCON (não .xls antigo, não .csv).', true);
+  }
+}
+
+function tryAutoLoad(){
+  if(location.protocol === 'file:'){
+    setStatus('Modo "arquivo local" detectado — carregamento automático não funciona assim', 'err');
+    showEmptyBanner(
+      'Carregamento automático não funciona neste modo',
+      'Você abriu o index.html direto (duplo clique), o navegador chama isso de "file://" e bloqueia leitura automática de outros arquivos por segurança — isso acontece em qualquer site, não é um erro do painel. Duas opções: (1) clique no botão ao lado e selecione o Siscon_Chamados.xlsx manualmente, ou (2) abra a pasta no VSCode e use a extensão "Live Server" para rodar via http://, aí ele carrega sozinho.',
+      true
+    );
+    return;
+  }
+  setStatus('Carregando ' + XLSX_FILENAME + '...', '');
+  const url = XLSX_FILENAME + '?t=' + Date.now();
+  console.log('[dashboard] tentando buscar:', location.href.replace(/index\.html.*/, '') + XLSX_FILENAME);
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('tempo esgotado (5s)')), 5000));
+  Promise.race([fetch(url), timeout])
+    .then(res => {
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      return res.arrayBuffer();
+    })
+    .then(buf => loadFromArrayBuffer(buf, XLSX_FILENAME))
+    .catch((err) => {
+      console.error('[dashboard] falha no fetch automático:', err);
+      setStatus('Não carreguei "' + XLSX_FILENAME + '" automaticamente (' + err.message + ')', 'err');
+      showEmptyBanner(
+        'Não encontrei o arquivo automaticamente',
+        'Estou rodando em "' + location.href + '" e procurei por "' + XLSX_FILENAME + '" nessa mesma pasta, mas não achei (erro: ' + err.message + '). Confira se o .xlsx está na mesma pasta do index.html e se você está usando um servidor local (ex: Live Server). Selecione o arquivo manualmente abaixo — o painel funciona igual.',
+        true
+      );
+    });
+}
+
+function wireFileInput(inputEl){
+  inputEl.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    setStatus('Lendo ' + file.name + '...', '');
+    const reader = new FileReader();
+    reader.onload = (ev) => loadFromArrayBuffer(ev.target.result, file.name);
+    reader.onerror = () => setStatus('Erro ao ler o arquivo selecionado.', 'err');
+    reader.readAsArrayBuffer(file);
+  });
+}
+wireFileInput(document.getElementById('fileInput'));
+wireFileInput(document.getElementById('fileInputBig'));
+
+document.getElementById('btnRefresh').addEventListener('click', tryAutoLoad);
+
+// primeira tentativa de carga automática ao abrir a página
+if(typeof Chart === 'undefined' || typeof XLSX === 'undefined'){
+  showEmptyBanner(
+    'As bibliotecas do painel não carregaram',
+    'Os arquivos vendor/chart.umd.min.js e vendor/xlsx.full.min.js precisam estar dentro de uma pasta "vendor" ao lado do index.html. Confira se essa pasta veio junto ao extrair o zip.',
+    true
+  );
+  setStatus('Erro: bibliotecas locais não encontradas', 'err');
+} else {
+  try{
+    renderAll();
+  } catch(e){
+    console.error('[dashboard] erro ao renderizar:', e);
+  }
+  showEmptyBanner('Carregando planilha...', 'Procurando "' + XLSX_FILENAME + '" na mesma pasta do index.html...', false);
+  tryAutoLoad();
+}
+</script>
+</body>
+</html>
