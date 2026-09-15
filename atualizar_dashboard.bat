@@ -1,21 +1,20 @@
 @echo off
-chcp 65001 >nul
 title Atualizar Dashboard SISCON
 color 0B
 
 REM ============================================================
-REM  CONFIGURACAO - edite as 2 linhas abaixo uma unica vez
+REM  CONFIGURACAO - edite a linha abaixo uma unica vez
+REM
+REM  Caminho da planilha DENTRO da pasta do OneDrive sincronizado.
+REM  Dica pra achar: abra a pasta do OneDrive no Explorer, clique
+REM  com o botao direito no arquivo, Propriedades, copie o campo
+REM  "Local", e cole abaixo, entre as aspas, adicionando o nome
+REM  do arquivo no final.
 REM ============================================================
 
-REM Caminho da planilha DENTRO da pasta do OneDrive sincronizado.
-REM Dica pra achar: abra o arquivo no Explorer, clique com o botao
-REM direito na aba de cima (ou nas propriedades) e copie o caminho.
-REM Geralmente comeca com "C:\Users\SEUUSUARIO\Compesa\..." ou
-REM "C:\Users\SEUUSUARIO\OneDrive - Compesa\..."
-set ONEDRIVE_FILE=C:\Users\SEU_USUARIO\Compesa\NOME_DA_PASTA\Siscon_Chamados.xlsx
+set "ONEDRIVE_FILE=C:\Users\juliaflora\OneDrive - Fundacao Compesa de Previdencia e Assistencia\Siscon Chamados.xlsx"
 
-REM Nome do arquivo dentro da pasta do projeto (nao precisa mexer)
-set PROJETO_FILE=Siscon_Chamados.xlsx
+set "PROJETO_FILE=Siscon Chamados.xlsx"
 
 REM ============================================================
 REM  DAQUI PRA BAIXO NAO PRECISA MEXER
@@ -29,9 +28,9 @@ echo.
 
 if not exist "%ONEDRIVE_FILE%" (
     echo [ERRO] Nao encontrei o arquivo em:
-    echo   %ONEDRIVE_FILE%
+    echo    %ONEDRIVE_FILE%
     echo.
-    echo Abra esse .bat com o Notepad e corrija o caminho na linha ONEDRIVE_FILE.
+    echo Abra este .bat com o Notepad e corrija o caminho na linha ONEDRIVE_FILE.
     echo.
     pause
     exit /b 1
